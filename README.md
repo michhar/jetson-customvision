@@ -5,30 +5,32 @@ This repo provides a sample of a [Custom Vision Service](https://docs.microsoft.
 ## Tested setup
 
 - Jetson AGX Xavier flashed with JetPack 4.4 (L4T R32.4.3) with all ML and CV tools (**including** `nvidia-docker`)
-- Additional NVMe 512 GB SSD
 - 16 GB swap file (on NVMe mount if using one, otherwise main storage disk)
 - [Optional] Additional NVMe 512 GB SSD
   - Set docker to use the NVMe drive for docker images
 - [Optional] Azure CLI installed on Jetson to push AI docker image
+- Default docker (not Moby) or Docker CE
 
-If using a different Jetson device, follow instructions for flashing that specific device.  It will still be a good idea to create an 8-16 GB swap file on the available storage for the model footprint when loaded into memory.
+If using a different Jetson device, follow instructions for flashing that specific device (e.g. Jetson Nano using a prebuilt image for a SD-card based OS).  It will still be a good idea to create an 8-16 GB swap file on the available storage for the model footprint when loaded into memory.
+
+To create a swap file, follow these Linux instructions:  https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/#creating-a-swap-file.
 
 ## Instructions
 
-1. Use CustomVision to train an object detection model, with the following notes:
+### 1. Use CustomVision to train an object detection model, with the following notes:
   - Use "General (compact)" as "Domain" ("compact" will ensure we can export for IoT Edge)
   - Export as Dockerfile --> ARM (Raspberry Pi 3) and download the zipped folder
   - Locate the `model.pb` and `labels.txt` files in the `app` folder within the main zip folder
 
-2. Place the `model.pb` model file and the `labels.txt` labels file into the `customvision-linux-arm/app` folder from this repo (if there is a `labels.txt` already in it, just overwrite with the newly exported one).
+### 2. Place the `model.pb` model file and the `labels.txt` labels file into the `customvision-linux-arm/app` folder from this repo (if there is a `labels.txt` already in it, just overwrite with the newly exported one).
 
-3. Build the docker image (this will build the image based on the `Dockerfile`) with a tag so that it's easy to upgrade as needed:
+### 3. Build the docker image (this will build the image based on the `Dockerfile`) with a tag so that it's easy to upgrade as needed:
     ```
     cd customvision-linux-arm
     nvidia-docker build -t objectdetection:0.0.1 .
     ```
 
-4. Check that it's using the GPU:
+### 4. Check that it's using the GPU:
     ```
     nvidia-docker run -it objectdetection:0.0.1 /bin/bash
 
@@ -51,13 +53,13 @@ If using a different Jetson device, follow instructions for flashing that specif
     eroot@:/app# exit
     ```
 
-5. Run and test container:
+### 5. Run and test container:
     ```
     nvidia-docker run --name my_cvs_container -p 127.0.0.1:80:80 -d objectdetection:0.0.1
     curl -X POST http://127.0.0.1:80/image -F imageData=@<full path to a test image file that has the object(s)>
     ```
 
-6. Use with Live Video Analytics on IoT Edge
+### 6. Use with Live Video Analytics on IoT Edge
 
   - This docker image can now be [pushed to Azure Container Registry with the Azure CLI](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli) and used with Live Video Analytics on IoT Edge on a Jetson device registered with Azure IoT Hub
 
@@ -85,3 +87,32 @@ If using a different Jetson device, follow instructions for flashing that specif
         }
     }
     ```
+### 7.  Troubleshoot
+
+- **Check that the GPU is being utlized**
+
+To check with a package called `jetson-stats`, Python3 is needed (on Jetson, `nvidia-smi` is not available).  Install Python as follows.
+
+```
+sudo apt-get update
+sudo apt-get install -y \
+    build-essential \
+    libffi-dev \
+    libssl1.0.0 \
+    libssl-dev \
+    python3-dev \
+    python3-pip
+```
+
+Install `jetson-stats` (more here):
+
+```
+sudo pip3 install jetson-stats
+```
+
+Run the tool to check resource management and usage:
+
+```
+jtop
+```
+
