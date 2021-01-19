@@ -17,20 +17,30 @@ To create a swap file, follow these Linux instructions:  https://linuxize.com/po
 
 ## Instructions
 
-### 1. Use CustomVision to train an object detection model, with the following notes:
+### 1. Use CustomVision to train an object detection model
+
+IMPORTANT NOTES:
   - Use "General (compact)" as "Domain" ("compact" will ensure we can export for IoT Edge)
   - Export as Dockerfile --> ARM (Raspberry Pi 3) and download the zipped folder
   - Locate the `model.pb` and `labels.txt` files in the `app` folder within the main zip folder
 
-### 2. Place the `model.pb` model file and the `labels.txt` labels file into the `customvision-linux-arm/app` folder from this repo (if there is a `labels.txt` already in it, just overwrite with the newly exported one).
+### 2. Add model and labels to project
 
-### 3. Build the docker image (this will build the image based on the `Dockerfile`) with a tag so that it's easy to upgrade as needed:
+- Place the `model.pb` model file and the `labels.txt` labels file into the `customvision-linux-arm/app` folder from this repo (if there is a `labels.txt` already in it, just overwrite with the newly exported one).
+
+### 3. Build the docker image
+
+Note:  this will build the image based on the `Dockerfile`.  Use a tag that is **not "latest"** so that it's easy to upgrade as needed (e.g. shown here as `0.0.1`).
+
     ```
     cd customvision-linux-arm
     nvidia-docker build -t objectdetection:0.0.1 .
     ```
 
-### 4. Check that it's using the GPU:
+### 4. Check that it's using the GPU
+
+Here, run the container and log into it.
+
     ```
     nvidia-docker run -it objectdetection:0.0.1 /bin/bash
 
@@ -53,7 +63,10 @@ To create a swap file, follow these Linux instructions:  https://linuxize.com/po
     eroot@:/app# exit
     ```
 
-### 5. Run and test container:
+### 5. Test container inferencing
+
+Use an image file similar to your training dataset.
+
     ```
     nvidia-docker run --name my_cvs_container -p 127.0.0.1:80:80 -d objectdetection:0.0.1
     curl -X POST http://127.0.0.1:80/image -F imageData=@<full path to a test image file that has the object(s)>
@@ -87,7 +100,7 @@ To create a swap file, follow these Linux instructions:  https://linuxize.com/po
         }
     }
     ```
-### 7.  Troubleshoot
+### Troubleshooting
 
 - **Check that the GPU is being utlized**
 
@@ -115,4 +128,11 @@ Run the tool to check resource management and usage:
 ```
 jtop
 ```
+
+- **If the device is sluggish or appears frozen**
+
+To work with a device that is sluggish, try to SSH in with the command line from a host computer rather than with a USB-attached keyboard and mouse and HDMI attached monitor (turn off device and dettach all of these components, then power back on).  This will usually allow more responsiveness.  If there is a module that is causing issues or direct method that can not be deactivated, the IoT Edge runtime may need to be uninstalled and reinstalled.  Refer to some of the instructions in [Uninstall IoT Edge](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-install-iot-edge?view=iotedge-2018-06&tabs=linux#uninstall-iot-edge).
+
+If the device is entirely frozen even after using an SSH method rather than monitor, keyboard and mouse, the device may need to be reflashed.
+
 
