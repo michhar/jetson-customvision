@@ -32,45 +32,45 @@ IMPORTANT NOTES:
 
 Note:  this will build the image based on the `Dockerfile`.  Use a tag that is **not "latest"** so that it's easy to upgrade as needed (e.g. shown here as `0.0.1`).
 
-    ```
-    cd customvision-linux-arm
-    nvidia-docker build -t objectdetection:0.0.1 .
-    ```
+```
+cd customvision-linux-arm
+nvidia-docker build -t objectdetection:0.0.1 .
+```
 
 ### 4. Check that it's using the GPU
 
 Here, run the container and log into it.
 
-    ```
-    nvidia-docker run -it objectdetection:0.0.1 /bin/bash
+```
+nvidia-docker run -it objectdetection:0.0.1 /bin/bash
 
-    # Inside container start Python 3
-    eroot@:/app# python
+# Inside container start Python 3
+eroot@:/app# python
 
-    # Inside Python interpreter
-    Python 3.6.9 (default, Oct  8 2020, 12:12:24) 
-    [GCC 8.4.0] on linux
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>> import tensorflow as tf
-    >>> print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-    # You should see more than 0 GPUs
-    >>> exit() # exit out of Python interpreter
+# Inside Python interpreter
+Python 3.6.9 (default, Oct  8 2020, 12:12:24) 
+[GCC 8.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import tensorflow as tf
+>>> print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+# You should see more than 0 GPUs
+>>> exit() # exit out of Python interpreter
 
-    # Try to run the Python app
-    eroot@:/app# python -u app.py
+# Try to run the Python app
+eroot@:/app# python -u app.py
 
-    # Stop this container
-    eroot@:/app# exit
-    ```
+# Stop this container
+eroot@:/app# exit
+```
 
 ### 5. Test container inferencing
 
 Use an image file similar to your training dataset.
 
-    ```
-    nvidia-docker run --name my_cvs_container -p 127.0.0.1:80:80 -d objectdetection:0.0.1
-    curl -X POST http://127.0.0.1:80/image -F imageData=@<full path to a test image file that has the object(s)>
-    ```
+```
+nvidia-docker run --name my_cvs_container -p 127.0.0.1:80:80 -d objectdetection:0.0.1
+curl -X POST http://127.0.0.1:80/image -F imageData=@<full path to a test image file that has the object(s)>
+```
 
 ### 6. Use with Live Video Analytics on IoT Edge
 
