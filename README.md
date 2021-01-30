@@ -37,14 +37,22 @@ To create a swap file, follow these Linux instructions:  https://linuxize.com/po
 
 ### 1. Use CustomVision to train an object detection model
 
+Follow [Quickstart: Build an object detector with the Custom Vision website](https://docs.microsoft.com/en-us/azure/cognitive-services/custom-vision-service/get-started-build-detector) to train an object detector with your images.
+
 Notes
 
-  - Use **"General (compact)"** as "Domain" ("compact" will ensure we can export for IoT Edge and model is of a smaller architecture)
+  - Use object detection and **"General (compact)"** as "Domain" ("compact" will ensure we can export for IoT Edge and model is of a smaller architecture)
   - If there are multiple classes, ensure a balanced dataset, that is, same number of images in each class for best performance ([other tips from Microsoft](https://docs.microsoft.com/en-us/azure/cognitive-services/custom-vision-service/getting-started-improving-your-classifier))
   - Export as Dockerfile --> ARM (Raspberry Pi 3) and download the zipped folder
   - Locate the `model.pb` and `labels.txt` files in the `app` folder within the main zip folder
 
-### 2. Add model and labels to project
+Example of hardhat detection (two-class) with Custom Vision (using the "Quick Test" feature after training):
+
+<img src="media/yes_hardhat_cvs_s.png" width="50%">
+<img src="media/no_hardhat_cvs_s.png" width="50%">
+
+
+### 2. Add model and labels to this project
 
 - Place the `model.pb` model file and the `labels.txt` labels file into the `customvision-linux-arm/app` folder from this repo (if there is a `labels.txt` already in it, just overwrite with the newly exported one).
 
@@ -98,12 +106,17 @@ The results will look like:
 {"created":"2021-01-30T00:30:42.895140","id":"","iteration":"","predictions":[{"boundingBox":{"height":0.12187065,"left":0.76290076,"top":0.32214137,"width":0.05968696},"probability":0.78185642,"tagId":0,"tagName":"no_hardhat"}],"project":""}
 ```
 
-Note
-- The position indicated by "left" and "top" refers to the distances from the top-left corner of the image
+> TIP:  The position indicated by "left" and "top" refers to the distances from the top-left corner of the image
 
 ### 6. Use with Live Video Analytics on IoT Edge
 
-  - This docker image can now be [pushed to Azure Container Registry with the Azure CLI](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli) and used with Live Video Analytics on IoT Edge on a Jetson device registered with Azure IoT Hub
+- Retag the docker image according to the name of your Azure Container Registry, e.g.,
+
+  `docker tag objectdetection:0.0.1 myacr.azurecr.io/objectdetection:0.0.1`
+
+> TIP: Always use a unique tag (e.g. `:0.0.1`) for each time you push a significant change to ACR - this makes it easy to keep track of iterations and ensure you are on the latest image in the IoT Edge runtime.
+
+- This docker image can now be [pushed to Azure Container Registry with the Azure CLI](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli) and used with Live Video Analytics on IoT Edge on a Jetson device registered with Azure IoT Hub
 
 - [Set up the IoT Edge runtime on Jetson device](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-install-iot-edge?view=iotedge-2018-06&tabs=linux)
   - Ensure on IoT Edge 1.0.10.x
