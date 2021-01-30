@@ -14,6 +14,7 @@ class ObjectDetection(object):
 
     ANCHORS = np.array([[0.573, 0.677], [1.87, 2.06], [3.34, 5.47], [7.88, 3.53], [9.77, 9.17]])
     IOU_THRESHOLD = 0.45
+    # Default input size relates to resolution and may be decreased to speed up prediction
     DEFAULT_INPUT_SIZE = 512 * 512
     PROB_THRESHOLD = 0.3
 
@@ -152,18 +153,65 @@ class ObjectDetection(object):
         prediction_outputs = self.predict(inputs)
         return self.postprocess(prediction_outputs)
 
+    def _norm_scale(self, arr):
+         """
+         Pixel intensity normalization w/ min/max
+         http://en.wikipedia.org/wiki/Normalization_%28image_processing%29
+         """
+         arr = arr.astype('float')
+         # Do not touch the alpha channel
+         for i in range(3):
+             minval = arr[...,i].min()
+             maxval = arr[...,i].max()
+             if minval != maxval:
+                 arr[...,i] -= minval
+                 arr[...,i] *= (255.0/(maxval-minval))
+         return arr
+
+
+    def _std_scale(self, arr):
+         """
+         Standardization transform or standard scaler (pixel intensity normalization)
+         Also, normalize 0 mean and unit variance.
+         """
+         arr = arr.astype('float')
+         # Do not touch the alpha channel
+         for i in range(3):
+             X = arr[...,i]
+             mean_ = np.mean(X)
+             scale_ = np.std(X - mean_)
+             arr[...,i] = (X - mean_) / scale_
+         return arr
+
     def preprocess(self, image):
-        """Preprocess PIL image"""
+        """Preprocess PIL image
+
+         Arguments
+         ---------
+         image : PIL Image
+
+         Returns
+         -------
+         resized_image : 3d np.array
+             resized and standardized image w/ values 0-255
+        """
         image = image.convert("RGB") if image.mode != "RGB" else image
         image = self._update_orientation(image)
-
+        
+        # Calculate new size for resizing
         ratio = math.sqrt(self.DEFAULT_INPUT_SIZE / image.width / image.height)
         new_width = int(image.width * ratio)
         new_height = int(image.height * ratio)
         new_width = 32 * round(new_width / 32);
         new_height = 32 * round(new_height / 32);
-        image = image.resize((new_width, new_height))
-        return image
+        print("New image size, width = {}, height = {}".format(new_width, new_height))
+
+        ## Resize and convert to numpy array
+        resized_image = image.resize((new_width, new_height), resample=Image.BILINEAR)
+        resized_image = np.asarray(resized_image).astype(np.float)
+        resized_image = resized_image[:, :, (2, 1, 0)]  # RGB -> BGR
+        resized_image = self._norm_scale(resized_image)
+        return resized_image
 
     def predict(self, preprocessed_inputs):
         """Evaluate the model and get the output

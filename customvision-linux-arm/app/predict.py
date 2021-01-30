@@ -11,6 +11,18 @@ from urllib.request import urlopen
 from datetime import datetime
 from object_detection import ObjectDetection
 
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print("Runtime error: ", e)
+
 MODEL_FILENAME = 'model.pb'
 LABELS_FILENAME = 'labels.txt'
 
@@ -22,16 +34,19 @@ class TFObjectDetection(ObjectDetection):
     def __init__(self, graph_def, labels):
         super(TFObjectDetection, self).__init__(labels)
         self.graph = tf.compat.v1.Graph()
+
+        self.config = tf.compat.v1.ConfigProto()
+        self.config.gpu_options.allow_growth = True
+        self.config.gpu_options.per_process_gpu_memory_fraction = 0.4
+
         with self.graph.as_default():
             input_data = tf.compat.v1.placeholder(tf.float32, [1, None, None, 3], name='Placeholder')
             tf.import_graph_def(graph_def, input_map={"Placeholder:0": input_data}, name="")
 
     def predict(self, preprocessed_image):
-        inputs = np.array(preprocessed_image, dtype=np.float)[:, :, (2, 1, 0)]  # RGB -> BGR
-
         with tf.compat.v1.Session(graph=self.graph) as sess:
             output_tensor = sess.graph.get_tensor_by_name('model_outputs:0')
-            outputs = sess.run(output_tensor, {'Placeholder:0': inputs[np.newaxis, ...]})
+            outputs = sess.run(output_tensor, {'Placeholder:0': preprocessed_image[np.newaxis, ...]})
             return outputs[0]
 
 def log_msg(msg):
