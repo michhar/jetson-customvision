@@ -11,7 +11,7 @@ Jetson AGX Xavier
 - [Optional - for expanded storage] Additional NVMe 512 GB SSD
   - Set docker to use the NVMe drive for docker images
   
-Jetson Nano
+Jetson Nano (Work in Progress)
 
 - Jetson Nano flashed with Jetpack 4.4.1 (L4T R32.4.4) using standard setup path, [Getting Started with Jetson Nano Developer Kit](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit)
 - Using 128 GB SD card for OS and system
@@ -173,12 +173,12 @@ jtop
 
 - **If the device is sluggish or appears frozen**
 
-To work with a device that is sluggish, try to SSH in with the command line from a host computer rather than with a USB-attached keyboard and mouse and HDMI attached monitor (turn off device and dettach all of these components, then power back on).  This will usually allow more responsiveness.  If there is a module that is causing issues or direct method that can not be deactivated, the IoT Edge runtime may need to be uninstalled and reinstalled.  Refer to some of the instructions in [Uninstall IoT Edge](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-install-iot-edge?view=iotedge-2018-06&tabs=linux#uninstall-iot-edge).
+To work with a device that is sluggish, try to SSH in with the command line from a host computer rather than with a USB-attached keyboard and mouse and HDMI attached monitor (turn off device and dettach all of these components, then power back on).  This will usually allow more responsiveness.
 
-If the device is entirely frozen even after using an SSH method, try the following (delete app data for LVA):
+If the device is still slow or LVA module is throwing errors related to secrets, even after using an SSH method, try the following (this is to delete app data for LVA module and reset it):
   1. Stop IoT Edge runtime
   `sudo systemctl stop iotedge`
-  2. Delete the application data associated with LVA (this is specified in the `.env` on the dev machine (in deployment manifest file as well).
+  2. Delete the application data associated with LVA (this is specified in the `.env` on the dev machine - in deployment manifest file as well).
   e.g. `sudo rm -fr /var/lib/azuremediaservices/*`
   3. Start IoT Edge runtime
   `sudo systemctl start iotedge`
