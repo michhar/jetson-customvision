@@ -2,21 +2,23 @@
 
 This repo provides a sample of a [Custom Vision Service](https://docs.microsoft.com/en-us/azure/cognitive-services/custom-vision-service/) model running in a docker container on an NVIDIA Jetson device.  It utilizes the NVIDIA GPU for predictions.  The resulting docker image will be compatible with [Live Video Analytics on IoT Edge](https://docs.microsoft.com/en-us/azure/media-services/live-video-analytics-edge/).
 
+Note:  this repo is updating often to fix issues as it is a work in progress.  Please excuse the iterations.  It will be noted here when things are more stable.  Thank you for your patience.
+
 ## Tested setups
 
 Jetson AGX Xavier
 
 - Jetson AGX Xavier flashed with JetPack 4.4 (L4T R32.4.3) with all ML and CV tools (**including** `nvidia-docker`)
 - 8-16 GB swap file (on NVMe mount if using one, otherwise main storage disk) for expanding memory during prediction
-- [Optional - for expanded storage] Additional NVMe 512 GB SSD
+- Additional NVMe (512 GB SSD used)
   - Set docker to use the NVMe drive for docker images
   
-Jetson Nano (Work in Progress)
+Jetson Nano (work in progress/currently testing - instructions may update often)
 
-- Jetson Nano flashed with Jetpack 4.4.1 (L4T R32.4.4) using standard setup path, [Getting Started with Jetson Nano Developer Kit](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit)
+- Jetson Nano flashed with **JetPack 4.4.1** (IMPORTANT: If using additional SSD for filesystem according to steps below, use JetPack 4.4.1 and _not_ 4.5) using standard setup path, [Getting Started with Jetson Nano Developer Kit - JetPack 4.4.1](https://developer.nvidia.com/jetpack-sdk-441-archive)
 - Using 128 GB SD card for OS and system
 - Set up additional swap (8GB total shared w/ CPUs) with [instructions from Jetson Hacks](https://www.jetsonhacks.com/2019/11/28/jetson-nano-even-more-swap/)
-- [Optional - for faster read/writes and expanded storage] Additional SSD mounted through USB 3.0 port ([instructions on Jetson Hacks](https://www.jetsonhacks.com/2019/09/17/jetson-nano-run-from-usb-drive/))
+- Additional SSD (250 GB Samsung Evo used) mounted through USB 3.0 port used for filesystem (for faster read/writes) ([instructions on Jetson Hacks on how to use USB as filesystem](https://www.jetsonhacks.com/2019/09/17/jetson-nano-run-from-usb-drive/) - IMPORTANT: follow **video** instructions which are much more detailed w/ important info)
   - Set docker to use the SSD drive for docker images
 
 Software on devices
@@ -31,7 +33,7 @@ Notes
 - Building and running the docker images will be with `nvidia-docker`
 - Memory on Nano is shared between CPUs and GPU so increasing the swap size will help greatly
 
-To create a swap file, follow these Linux instructions:  https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/#creating-a-swap-file.
+On Xavier only:  to create a swap file, follow these Linux instructions:  https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/#creating-a-swap-file.
 
 ## Instructions
 
@@ -142,7 +144,7 @@ The results will look like:
         }
     }
     ```
-### Troubleshooting
+## Troubleshooting
 
 - **Check that the GPU is being utlized**
 
