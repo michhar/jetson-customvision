@@ -4,38 +4,171 @@ This repo provides a sample of a [Custom Vision Service](https://docs.microsoft.
 
 Note:  this repo is updating often to fix issues as it is a work in progress.  Please excuse the iterations.  It will be noted here when things are more stable.  Thank you for your patience.
 
-## Tested setups
+## Tested setup(s)
 
-Jetson AGX Xavier
+**Jetson AGX Xavier**
 
 - Jetson AGX Xavier flashed with JetPack 4.4 (L4T R32.4.3) with all ML and CV tools (**including** `nvidia-docker`)
 - 8-16 GB swap file (on NVMe mount if using one, otherwise main storage disk) for expanding memory during prediction
 - Additional NVMe (512 GB SSD used)
   - Set docker to use the NVMe drive for docker images
-  
-Jetson Nano (work in progress/currently testing - instructions may update often)
 
-- Jetson Nano flashed with **JetPack 4.4.1** (IMPORTANT: If using additional SSD for filesystem according to steps below, use JetPack 4.4.1 and _not_ 4.5) using standard setup path, [Getting Started with Jetson Nano Developer Kit - JetPack 4.4.1](https://developer.nvidia.com/jetpack-sdk-441-archive)
-- Using 128 GB SD card for OS and system
-- Set up additional swap (8GB total shared w/ CPUs) with [instructions from Jetson Hacks](https://www.jetsonhacks.com/2019/11/28/jetson-nano-even-more-swap/)
-- Additional SSD (250 GB Samsung Evo used) mounted through USB 3.0 port used for filesystem (for faster read/writes) ([instructions on Jetson Hacks on how to use USB as filesystem](https://www.jetsonhacks.com/2019/09/17/jetson-nano-run-from-usb-drive/) - IMPORTANT: follow **video** instructions which are much more detailed w/ important info)
-  - Set docker to use the SSD drive for docker images
-
-Software on devices
+**Software on device**
 
 - OS:  Ubuntu 18.04 LTS
-- [Optional] Azure CLI installed on Jetson to push AI docker image
-- Default docker (not Moby) or Docker CE
+- JetPack 4.4 
+- Azure CLI installed on Jetson to push AI docker image
+- Default `nvidia-docker` (do not need Moby or Docker CE)
+- IoT Edge runtime 1.0.10.x
 
-Notes
+**Notes**
 
-- Follow instructions for flashing that specific device (e.g. Jetson Nano using a prebuilt image for a SD-card based OS from NVIDIA link above)
 - Building and running the docker images will be with `nvidia-docker`
-- Memory on Nano is shared between CPUs and GPU so increasing the swap size will help greatly
+- A swap file will be used to expand memory by 8-16GB on the SSD (see below setup details).
 
-On Xavier only:  to create a swap file, follow these Linux instructions:  https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/#creating-a-swap-file.
+## Details for Jetson Xavier AGX hardware setup
 
-## Instructions
+> General getting started guides for all Jetson platforms:  https://developer.nvidia.com/embedded/learn/getting-started-jetson
+
+### Additional Equipment
+
+* Additional SSD like an NVMe 512GB (Xavier)
+* A "host" machine with Ubuntu 16.04 or 18.04 (e.g. an AMD64-based Lenovo Thinkpad) for NVIDIA SDK Manager
+* Mouse and keyboard (wired USB)
+* Monitor (HDMI)
+* [Recommended] USB hub for peripherals
+  * Note:  USB devices share power and the more you have, the more power gets used
+
+### Prepare to flash Jetson (Xavier)
+
+* Download the [NVIDIA SDK Manager for JetPack 4.4 (not the SD card method)](https://developer.nvidia.com/jetpack-sdk-44-archive) to the host machine (an [NVIDIA Developer membership](https://developer.nvidia.com/developer-program) may be required)
+
+### Flash device
+
+> IMPORTANT:
+> - Plug in all peripherals and host before plugging into power
+> - Ensure you select all ML tools, CV tools, **and** `nvidia-docker`.
+
+Note:  The manual method was chosen in this guide during flashing through the NVIDIA SDK Manager.  Follow the [instructions online](https://docs.nvidia.com/sdk-manager/install-with-sdkm-jetson/index.html).
+
+### Install an SSD NVMe (Xavier)
+
+> Note:  other Jetson devices may not support NVMe w/ an M.2 connector
+
+- Follow this tutorial to install the NVMe SSD ((512 GB used here)) on the Xavier:  https://www.jetsonhacks.com/2018/10/18/install-nvme-ssd-on-nvidia-jetson-agx-developer-kit/.
+
+### Set up the NVMe SSD (Xavier)
+
+In the terminal, mount the SSD as follows (example).
+
+```
+cat /proc/partitions
+(echo o; echo n; echo p; echo 1; echo ""; echo ""; echo w; echo q) | sudo fdisk /dev/nvme0n1
+cat /proc/partitions
+sudo mkfs.ext4 /dev/nvme0n1p1
+# Look at the output to get your own UUID
+sudo vim /etc/fstab
+# UUID=<block id> /media/nvme ext4 defaults 0 0
+# For example:
+# UUID=13024e1e-cfa1-4f99-a40b-d3cdccc37869 /media/nvme ext4 defaults 0 0
+sudo mkdir /media/nvme
+sudo chmod 777 /media/nvme
+sudo mount /media/nvme/
+sudo reboot
+```
+
+### Reconfigure Docker to use new NVMe (and `nvidia-docker`)
+
+Here, we will modify the `etc/docker/daemon.json` file to add the data root for docker assets to point to the NVMe SSD and the NVIDIA runtime setting.
+
+Create the docker directory and open the docker daemon config file with a text editor.
+```
+sudo mkdir /media/nvme/docker
+sudo vim /etc/docker/daemon.json
+```
+
+Ensure the `/etc/docker/daemon.json` includes the following.
+
+```
+{
+    "data-root": "/media/nvme/docker",
+
+    "runtimes": {
+        "nvidia": {
+            "path": "nvidia-container-runtime",
+            "runtimeArgs": []
+        }
+    }
+}
+
+```
+
+And restart:
+
+```
+sudo systemctl restart docker
+```
+
+Give the user sudo permission to run docker by following https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user.
+
+### Create a Swap File (Xavier only)
+
+Create a swap file on the NVMe SSD so that there will be enough memory to load and run machine learning models and the necessary containers.  Create a 16GB file according to the following:  https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/#creating-a-swap-file (using `/media/nvme/swapfile` as file location).
+
+Additionally, swappiness of the swapfile (e.g. the `/media/ssd/swapfile`) may be increased with the following ([Source](https://haydenjames.io/linux-performance-almost-always-add-swap-part2-zram/)).
+
+First, check the value of swappiness.  The number can be from 0-100, but the default is usually 60.
+
+```
+sudo cat /proc/sys/vm/swappiness
+```
+
+Temporarily set swappiness to a more aggressive number (it will tend to use the swap more) with the following (note:  this will not persist after reboot).
+
+```
+sudo sysctl -w vm.swappiness=90
+```
+
+Once you know what swappiness works best, you may set it permanently by adding or replacing this line in `/etc/sysctl.conf` file (try a higher value to prioritize using the swap file, e.g., 90 is used here).
+
+```
+vm.swappiness=90
+```
+
+Swappiness values may need to be tested and adjusted as needed.
+
+## Install Python 3
+
+It is nice to have Python for local testing and is required for the Azure CLI to work.  However, most work will be from docker containers and one can always run a bash shell inside a running container for Python.
+
+> Note: Python3 may already be on the device so you may check by typing `python3` on the command line, however often `pip3` is _not_ installed.
+
+Install `python3` and `pip3` as shown here.  Then, add `ln -s /usr/bin/python3 /usr/bin/python` afer the `apt-get install`.
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    build-essential \
+    libffi-dev \
+    libssl1.0.0 \
+    libssl-dev \
+    python3-dev \
+    python3-pip \
+```
+
+## Install the Azure CLI from Python package repo (PyPI)
+
+There are two ways to install the Azure CLI on Linux.  The first is the way recommended in [Azure docs](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt).  The second is through PyPI, the Python package repo.  Here, PyPI is used and works well.
+
+Install the Azure CLI as a Python package as follows (you will need [Python3 and Pip3 installed](#install-python-3) on your system).
+
+```
+pip3 install azure-cli
+```
+
+## Instructions to create ML model
+
+> Note:  This is roughly following the [Tutorial: Analyze live video with Live Video Analytics on IoT Edge and Azure Custom Vision]() doc where you can find the video and necessary data to train a toy truck detector model.
 
 ### 1. Use CustomVision to train an object detection model
 
@@ -112,16 +245,47 @@ The results will look like:
 
 ### 6. Use with Live Video Analytics on IoT Edge
 
-- Retag the docker image according to the name of your Azure Container Registry, e.g.,
+1. Retag the docker image according to the name of your Azure Container Registry, e.g.,
 
   `docker tag objectdetection:0.0.1 myacr.azurecr.io/objectdetection:0.0.1`
 
 > TIP: Always use a unique tag (e.g. `:0.0.1`) for each time you push a significant change to ACR - this makes it easy to keep track of iterations and ensure you are on the latest image in the IoT Edge runtime.
 
-- This docker image can now be [pushed to Azure Container Registry with the Azure CLI](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli) and used with Live Video Analytics on IoT Edge on a Jetson device registered with Azure IoT Hub
+2. This docker image can now be [pushed to Azure Container Registry with the Azure CLI](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli) and used with Live Video Analytics on IoT Edge on a Jetson device registered with Azure IoT Hub
 
-- [Set up the IoT Edge runtime on Jetson device](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-install-iot-edge?view=iotedge-2018-06&tabs=linux)
-  - Ensure on IoT Edge 1.0.10.x
+3. [Get certificates and proper access to install the IoT Edge runtime and resources according to Azure docs](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-install-iot-edge?view=iotedge-2018-06#prerequisites).
+
+> IMPORTANT:  You don't need Moby Engine/runtime because you already have the NVIDIA docker runtime (`nvidia-docker`)
+
+4. [Install the IoT Edge security daemon according to Azure docs](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-install-iot-edge?view=iotedge-2018-06#install-the-iot-edge-security-daemon).
+
+5. Set the device connection string on the device by updating `/etc/iotedge/config.yaml` line 88 (as of this writing) with the proper `device_connection_string` from the [Azure Portal](https://portal.azure.com) from the desired device registration within the IoT Hub resource.
+
+6. Create the video input folder and video output folder and set permissions.  For example:
+
+```
+sudo mkdir -p /live/mediaServer/media
+sudo chmod -R ugo+rw /live/mediaServer/media
+sudo mkdir /media/ssd/output
+sudo chmod -R ugo+rw /media/ssd/output
+```
+
+7. Download the test toy truck video to the Jetson device.  This is the video that the RTSP simulator module/container will use.
+
+```
+cd /live/mediaServer/media
+wget https://lvamedia.blob.core.windows.net/public/t2.mkv
+```
+8.  Clone the Live Video Analytics Python sample.
+
+```
+git clone https://github.com/Azure-Samples/live-video-analytics-iot-edge-python.git
+```
+
+9. Follow the rest of the tutorial starting at https://docs.microsoft.com/en-us/azure/media-services/live-video-analytics-edge/custom-vision-tutorial?pivots=programming-language-python#examine-the-sample-files.
+
+
+IMPORTANT:
 
 - Ensure the "cv" ML IoT module has the following `createOptions` (see the included `deployment.customvision.arm64.template.json` deployment manifest):
 
@@ -144,6 +308,7 @@ The results will look like:
         }
     }
     ```
+
 ## Troubleshooting
 
 - **Check that the GPU is being utlized**
