@@ -5,6 +5,7 @@
 # (4. if inference speed is too slow for you, try to make w' x h' smaller, which is defined with DEFAULT_INPUT_SIZE (in object_detection.py or ObjectDetection.cs))
 import sys
 import tensorflow as tf
+import json
 import numpy as np
 from PIL import Image
 from urllib.request import urlopen
@@ -37,14 +38,13 @@ class TFObjectDetection(ObjectDetection):
 
         self.config = tf.compat.v1.ConfigProto()
         self.config.gpu_options.allow_growth = True
-        self.config.gpu_options.per_process_gpu_memory_fraction = 0.4
 
         with self.graph.as_default():
             input_data = tf.compat.v1.placeholder(tf.float32, [1, None, None, 3], name='Placeholder')
             tf.import_graph_def(graph_def, input_map={"Placeholder:0": input_data}, name="")
 
     def predict(self, preprocessed_image):
-        with tf.compat.v1.Session(graph=self.graph) as sess:
+        with tf.compat.v1.Session(graph=self.graph, config=self.config) as sess:
             output_tensor = sess.graph.get_tensor_by_name('model_outputs:0')
             outputs = sess.run(output_tensor, {'Placeholder:0': preprocessed_image[np.newaxis, ...]})
             return outputs[0]
@@ -81,12 +81,12 @@ def predict_image(image):
 
     predictions = od_model.predict_image(image)
 
-    response = {
-        'id': '',
-        'project': '',
-        'iteration': '',
-        'created': datetime.utcnow().isoformat(),
-        'predictions': predictions }
-        
-    log_msg('Results: ' + str(response))
+    response = {'id': '',
+                'project': '',
+                'iteration': '',
+                'created': datetime.utcnow().isoformat(),
+                'predictions': predictions
+                }
+
+    log_msg('Results: ' + json.dumps(response))
     return response

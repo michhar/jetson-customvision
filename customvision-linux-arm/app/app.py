@@ -1,10 +1,12 @@
-
+"""
+Creates Flask HTTP server to run the Custom Vision model.
+"""
 import json
 import os
 import io
 
 # Imports for the REST API
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 
 # Imports for image procesing
 from PIL import Image
@@ -43,11 +45,12 @@ def predict_image_handler(project=None, publishedName=None):
             imageData = io.BytesIO(request.get_data())
 
         img = Image.open(imageData)
-        results = predict_image(img)
-        return jsonify(results)
-    except Exception as e:
-        print('EXCEPTION:', str(e))
-        return 'Error processing image', 500
+        response = predict_image(img)
+        return jsonify(response)
+    except Exception as err:
+        err_val = '[ERROR] Exception in score : {}'.format(repr(err))
+        print(err_val)
+        return Response(response=json.dumps(err_val), status=500)
 
 
 # Like the CustomVision.ai Prediction service /url route handles url's
