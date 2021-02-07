@@ -247,7 +247,9 @@ The results will look like:
 
 1. Retag the docker image according to the name of your Azure Container Registry, e.g.,
 
-  `docker tag objectdetection:0.0.1 myacr.azurecr.io/objectdetection:0.0.1`
+```
+docker tag objectdetection:0.0.1 myacr.azurecr.io/objectdetection:0.0.1
+```
 
 > TIP: Always use a unique tag (e.g. `:0.0.1`) for each time you push a significant change to ACR - this makes it easy to keep track of iterations and ensure you are on the latest image in the IoT Edge runtime.
 
@@ -266,8 +268,8 @@ The results will look like:
 ```
 sudo mkdir -p /live/mediaServer/media
 sudo chmod -R ugo+rw /live/mediaServer/media
-sudo mkdir /media/ssd/output
-sudo chmod -R ugo+rw /media/ssd/output
+sudo mkdir /media/nvme/output
+sudo chmod -R ugo+rw /media/nvme/output
 ```
 
 7. Download the test toy truck video to the Jetson device.  This is the video that the RTSP simulator module/container will use.
@@ -326,7 +328,7 @@ sudo apt-get install -y \
     python3-pip
 ```
 
-Install `jetson-stats` (more here):
+Install `jetson-stats` ([more here](https://github.com/rbonghi/jetson_stats)):
 
 ```
 sudo pip3 install jetson-stats
@@ -352,4 +354,4 @@ If the device is still slow or LVA module is throwing errors related to secrets,
 
 - **If prediction is unacceptably slow**
 
-To speed up the time for prediction, adjust the input resolution on line 18 of `~/Documents/jetson-customvision/customvision-linux-arm\object_detection.py` (https://github.com/michhar/jetson-customvision/blob/main/customvision-linux-arm/app/object_detection.py#L18) to be smaller, e.g., `256 * 256`.
+To speed up the time for prediction, adjust the input resolution on line 18 of `<path to repo>/jetson-customvision/customvision-linux-arm/object_detection.py` (https://github.com/michhar/jetson-customvision/blob/main/customvision-linux-arm/app/object_detection.py#L18) to be smaller, e.g., `416 * 416`.
