@@ -12,7 +12,7 @@ from flask import Flask, request, jsonify, Response
 from PIL import Image
 
 # Imports for prediction
-from predict import initialize, predict_image, predict_url
+from onnxruntime_predict import initialize, predict_image, predict_url
 
 app = Flask(__name__)
 

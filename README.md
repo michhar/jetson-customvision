@@ -1,6 +1,6 @@
 # Using a Custom Vision Model on an NVIDIA Jetson Device with Docker
 
-This repo provides a sample of a [Custom Vision Service](https://docs.microsoft.com/en-us/azure/cognitive-services/custom-vision-service/) model running in a docker container on an NVIDIA Jetson device.  It utilizes the NVIDIA GPU for predictions.  The resulting docker image will be compatible with [Live Video Analytics on IoT Edge](https://docs.microsoft.com/en-us/azure/media-services/live-video-analytics-edge/).
+This repo provides a sample of a [Custom Vision Service](https://docs.microsoft.com/en-us/azure/cognitive-services/custom-vision-service/) ONNX model running in a docker container on an Xavier AGX NVIDIA Jetson device.  It utilizes the NVIDIA GPU for predictions.  The resulting docker image will be compatible with [Live Video Analytics on IoT Edge](https://docs.microsoft.com/en-us/azure/media-services/live-video-analytics-edge/).
 
 Note:  this repo is updating often to fix issues as it is a work in progress.  Please excuse the iterations.  It will be noted here when things are more stable.  Thank you for your patience.
 
@@ -11,14 +11,14 @@ Note:  this repo is updating often to fix issues as it is a work in progress.  P
 - Jetson AGX Xavier flashed with JetPack 4.4 (L4T R32.4.3) with all ML and CV tools (**including** `nvidia-docker`)
 - 8-16 GB swap file (on NVMe mount if using one, otherwise main storage disk) for expanding memory during prediction
 - Additional NVMe (512 GB SSD used)
-  - Set docker to use the NVMe drive for docker images
+  - Set docker to use the NVMe drive for docker images and containers
 
 **Software on device**
 
 - OS:  Ubuntu 18.04 LTS
 - JetPack 4.4 
 - Azure CLI installed on Jetson to push AI docker image
-- Default `nvidia-docker` (do not need Moby or Docker CE)
+- Default is `nvidia-docker` (do not need Moby or Docker CE)
 - IoT Edge runtime 1.0.10.x
 
 **Notes**
@@ -39,7 +39,7 @@ Note:  this repo is updating often to fix issues as it is a work in progress.  P
 * [Recommended] USB hub for peripherals
   * Note:  USB devices share power and the more you have, the more power gets used
 
-### Prepare to flash Jetson (Xavier)
+### Prepare to flash Jetson
 
 * Download the [NVIDIA SDK Manager for JetPack 4.4 (not the SD card method)](https://developer.nvidia.com/jetpack-sdk-44-archive) to the host machine (an [NVIDIA Developer membership](https://developer.nvidia.com/developer-program) may be required)
 
@@ -51,13 +51,13 @@ Note:  this repo is updating often to fix issues as it is a work in progress.  P
 
 Note:  The manual method was chosen in this guide during flashing through the NVIDIA SDK Manager.  Follow the [instructions online](https://docs.nvidia.com/sdk-manager/install-with-sdkm-jetson/index.html).
 
-### Install an SSD NVMe (Xavier)
+### Install an SSD NVMe
 
 > Note:  other Jetson devices may not support NVMe w/ an M.2 connector
 
 - Follow this tutorial to install the NVMe SSD ((512 GB used here)) on the Xavier:  https://www.jetsonhacks.com/2018/10/18/install-nvme-ssd-on-nvidia-jetson-agx-developer-kit/.
 
-### Set up the NVMe SSD (Xavier)
+### Set up the NVMe SSD
 
 In the terminal, mount the SSD as follows (example).
 
@@ -111,7 +111,7 @@ sudo systemctl restart docker
 
 Give the user sudo permission to run docker by following https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user.
 
-### Create a Swap File (Xavier only)
+### Create a Swap File
 
 Create a swap file on the NVMe SSD so that there will be enough memory to load and run machine learning models and the necessary containers.  Create a 16GB file according to the following:  https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-18-04/#creating-a-swap-file (using `/media/nvme/swapfile` as file location).
 
@@ -178,8 +178,8 @@ Notes
 
   - Use object detection and **"General (compact)"** as "Domain" ("compact" will ensure we can export for IoT Edge and model is of a smaller architecture)
   - If there are multiple classes, ensure a balanced dataset, that is, same number of images in each class for best performance ([other tips from Microsoft](https://docs.microsoft.com/en-us/azure/cognitive-services/custom-vision-service/getting-started-improving-your-classifier))
-  - Export as Dockerfile --> ARM (Raspberry Pi 3) and download the zipped folder
-  - Locate the `model.pb` and `labels.txt` files in the `app` folder within the main zip folder
+  - Export as ONNX --> ONNX Float16 (the float16 means the model has been quantized to decrease its memory footprint)
+  - Locate the `model.onnx` and `labels.txt` files in the downloaded folder.
 
 Example of hardhat detection (two-class) with Custom Vision (using the "Quick Test" feature after training):
 
@@ -189,7 +189,7 @@ Example of hardhat detection (two-class) with Custom Vision (using the "Quick Te
 
 ### 2. Add model and labels to this project
 
-- Place the `model.pb` model file and the `labels.txt` labels file into the `customvision-linux-arm/app` folder from this repo (if there is a `labels.txt` already in it, just overwrite with the newly exported one).
+- Place the `model.onnx` model file and the `labels.txt` labels file into the `customvision-linux-arm/app` folder from this repo (if there is a `labels.txt` already, just overwrite with the newly exported one).
 
 ### 3. Build the docker image
 
@@ -197,41 +197,26 @@ Note:  this will build the image based on the `Dockerfile`.  Use a tag that is *
 
 ```
 cd customvision-linux-arm
-nvidia-docker build -t objectdetection:0.0.1 .
+nvidia-docker build -t objectdetection:0.0.1 -f onnx.dockerfile .
 ```
 
 ### 4. Check that it's using the GPU
 
-Here, run the container and log into it.
-
-```
-nvidia-docker run -it objectdetection:0.0.1 /bin/bash
-
-# Inside container start Python 3
-eroot@:/app# python
-
-# Inside Python interpreter
-Python 3.6.9 (default, Oct  8 2020, 12:12:24) 
-[GCC 8.4.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>> import tensorflow as tf
->>> print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-# You should see more than 0 GPUs
->>> exit() # exit out of Python interpreter
-
-# Try to run the Python app
-eroot@:/app# python -u app.py
-
-# Stop this container
-eroot@:/app# exit
-```
+To test that the container is using GPU, check the [Troubleshooting](#troubleshooting) section for instructions on using `jtop`.
 
 ### 5. Test container predictions
 
-Use an image file similar to your training dataset.
+Use an image file similar to your training dataset in the following instructions.
+
+Use the following command to start the container.
 
 ```
 nvidia-docker run --name my_cvs_container -p 127.0.0.1:80:80 -d objectdetection:0.0.1
+```
+
+Use the following command to predict on an image (use full path of image on system, replacing the `<>` with the path).
+
+```
 curl -X POST http://127.0.0.1:80/image -F imageData=@<full path to a test image file that has the object(s)>
 ```
 
@@ -242,6 +227,8 @@ The results will look like:
 ```
 
 > TIP:  The position indicated by "left" and "top" refers to the distances from the top-left corner of the image
+
+To test that the container is using GPU, check the [Troubleshooting](#troubleshooting) section for instructions on using `jtop` during a prediction.
 
 ### 6. Use with Live Video Analytics on IoT Edge
 
