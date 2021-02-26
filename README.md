@@ -156,6 +156,13 @@ sudo apt-get install -y \
     python3-pip
 ```
 
+For some packages, a more recent `pip` and `setuptools` will be needed.  Update these with the following commands:
+
+```
+pip3 install --upgrade pip
+pip3 install --upgrade setuptools
+```
+
 ## Install the Azure CLI from Python package repo (PyPI)
 
 There are two ways to install the Azure CLI on Linux.  The first is the way recommended in [Azure docs](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt).  The second is through PyPI, the Python package repo.  Here, PyPI is used and works well.
