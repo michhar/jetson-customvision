@@ -165,6 +165,8 @@ Install the Azure CLI as a Python package as follows (you will need [Python3 and
 ```
 pip3 install azure-cli
 ```
+By default the `az` command will be at `$HOME/.local/bin/az`.  You may wish to add this to your `PATH`.
+
 
 ## Instructions to create ML model
 
