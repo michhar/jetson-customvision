@@ -153,7 +153,7 @@ sudo apt-get install -y \
     libssl1.0.0 \
     libssl-dev \
     python3-dev \
-    python3-pip \
+    python3-pip
 ```
 
 ## Install the Azure CLI from Python package repo (PyPI)
@@ -200,11 +200,7 @@ cd customvision-linux-arm
 nvidia-docker build -t objectdetection:0.0.1 -f onnx.dockerfile .
 ```
 
-### 4. Check that it's using the GPU
-
-To test that the container is using GPU, check the [Troubleshooting](#troubleshooting) section for instructions on using `jtop`.
-
-### 5. Test container predictions
+### 4. Test container predictions
 
 Use an image file similar to your training dataset in the following instructions.
 
@@ -230,7 +226,7 @@ The results will look like:
 
 To test that the container is using GPU, check the [Troubleshooting](#troubleshooting) section for instructions on using `jtop` during a prediction.
 
-### 6. Use with Live Video Analytics on IoT Edge
+### 5. Use with Live Video Analytics on IoT Edge
 
 1. Retag the docker image according to the name of your Azure Container Registry, e.g.,
 
